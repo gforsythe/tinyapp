@@ -10,7 +10,7 @@ app.get('/',(req, res) => {
   res.send('Hello');
 });
 
-app.get('/urls.json', (req, res) => {
+app.get('/urls', (req, res) => {
   res.json(urlDatabase);
 });
 
