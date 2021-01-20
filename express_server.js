@@ -52,6 +52,13 @@ app.get('/u/:shortURL', (req, res) => {//makes my short URL work when we Click o
   res.redirect(longURL);
 });
 
+app.post('/urls/:shortURL/edit', (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = req.body.newUrl;
+  urlDatabase[shortURL] = longURL;
+  res.redirect(`/urls/${shortURL}`);
+})
+
 app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL; //store into a variable
   delete urlDatabase[shortURL];//
