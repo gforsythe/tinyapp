@@ -3,11 +3,13 @@ const app = express()
 const PORT = 8080;
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser')
+
+//databases
 const urlDatabase = {
   'b2xVn2': 'http://www.lighthouselabs.ca',
   '9sm5xk': 'http://www.google.com'
 };
-
+//Database
 const users = {
   userRandomID: {
     id: "userRandomId",
@@ -39,6 +41,8 @@ function generateUrlID() {//generates random id nnmber 6 digits
   }
   return result;
 }
+
+
 //my middleware - they handle my requests and make my life easier to code
 //I should install morgan
 app.set('view engine', 'ejs');
@@ -98,8 +102,8 @@ app.get('/u/:shortURL', (req, res) => {//makes my short URL work when we Click o
   res.redirect(longURL);
 });
 
-app.get('/register', (req, res) =>{//lets see the register page
-res.render('urls_register');
+app.get('/register', (req, res) =>{//lets see the register page  
+  res.render('urls_register');
 });
 
 app.post('/login', (req,res) => {//we login and the cookie follows the username
