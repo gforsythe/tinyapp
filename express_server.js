@@ -8,8 +8,29 @@ const urlDatabase = {
   '9sm5xk': 'http://www.google.com'
 };
 
+const users = {
+  userRandomID: {
+    id: "userRandomId",
+    email: "user@example.com",
+    password: "purple"
+  },
+  user2RandomID:{
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "washer"
+  }
+};
 
-function generateRandomString(){//generates random id nnmber 6 digits
+function generateUserRandomId() {
+  let result = '';
+  let characters= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let charactersLength = characters.length;
+  for ( var i = 0; i < 5; i++ ) {
+   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
+function generateUrlID() {//generates random id nnmber 6 digits
   let result = '';
   let characters= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
@@ -34,7 +55,7 @@ app.get('/urls/new', (req, res) => { // lets see the newURL
 });
 
 app.post('/urls', (req, res) => {//create a new tiny url to submit
-  let shortURL = generateRandomString();
+  let shortURL = generateUrlID();
   urlDatabase[shortURL] = req["body"]["longURL"];
   res.redirect(`/urls/${shortURL}`);
 });
@@ -60,9 +81,25 @@ app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the t
   delete urlDatabase[shortURL];//
   res.redirect(`/urls`);
 });
+
+app.post('/register', (req, res) => {//once we click register we get sent to urls
+  let userID = generateUserRandomId()
+  let email = req.body["email"];
+  let password = req.body["password"];
+  let user = {id:userID, email:email, password: password};
+  users[userID] = user;
+  res.cookie("user_id",userID)
+  res.redirect('/urls');
+  console.log(users);
+})
+
 app.get('/u/:shortURL', (req, res) => {//makes my short URL work when we Click on it it goes to the long url
   const longURL = urlDatabase[req.params.shortURL];//change your code dummy what is that wack route
   res.redirect(longURL);
+});
+
+app.get('/register', (req, res) =>{//lets see the register page
+res.render('urls_register');
 });
 
 app.post('/login', (req,res) => {//we login and the cookie follows the username
@@ -74,7 +111,7 @@ app.post('/urls/:shortURL/edit', (req, res) => {
   const shortURL = req.params.shortURL; //to submit an edit
   const longURL = req.body.newUrl;
   urlDatabase[shortURL] = longURL;
-  res.redirect(`/urls/${shortURL}`);//we redirect to 'home'
+  res.redirect(`/urls/${shortURL}`);//we redirect to urls
 });
 
 app.post('/logout',(req,res) => {//allows for user to logout
