@@ -1,8 +1,8 @@
-const express = require('express'); 
-const app = express()
+const express = require('express');
+const app = express();
 const PORT = 8080;
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 
 //databases
 const urlDatabase = {
@@ -16,45 +16,60 @@ const users = {
     email: "user@example.com",
     password: "purple"
   },
-  user2RandomID:{
+  user2RandomID: {
     id: "user2RandomID",
     email: "user2@example.com",
     password: "washer"
   }
 };
 
-function generateUserRandomId() {
+function generateUserRandomId() { //give me a user ID
   let result = '';
-  let characters= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
-  for ( var i = 0; i < 5; i++ ) {
-   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  for (let i = 0; i < 5; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
 }
 function generateUrlID() {//generates random id nnmber 6 digits
   let result = '';
-  let characters= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
-  for ( var i = 0; i < 6; i++ ) {
-   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  for (let i = 0; i < 6; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
 }
+function searchForUserEmail(email, database) { //looks for email and finds a match
+  for (let key in database) {
+    if (database[key].email === email) {
+      return database[key];
+    }
+  }
+  return null;
+}
 
+function checkLogin(email, password, database) {
+  for (let key in database) {
+    if (database[key].email === email && database[key].password === password) {
+      return database[key];
+    }
+  }
+  return null;
+}
 
 //my middleware - they handle my requests and make my life easier to code
 //I should install morgan
 app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 
-
-
 app.get('/urls/new', (req, res) => { // lets see the newURL
-  const username = req.cookies['username'];
-  const templateVars = {username};
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  const templateVars = { user };
   res.render('urls_new', templateVars);
 });
 
@@ -65,15 +80,17 @@ app.post('/urls', (req, res) => {//create a new tiny url to submit
 });
 
 app.get('/urls', (req, res) => { //is it like home?
-  const username = req.cookies['username'];// here the addition of the username with cookies happens
-  const templateVars = { urls: urlDatabase, username };//added username
+  const userId = req.cookies['user_id'];// here the addition of the username with cookies happens
+  const user = users[userId];
+  const templateVars = { urls: urlDatabase, user };//added username
   res.render('urls_index', templateVars);
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const username = req.cookies['username'];
-  const templateVars = { shortURL: req.params.shortURL, longURL:urlDatabase[req.params.shortURL], username }
-  res.render('urls_show', templateVars) //we see the specific url
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user };
+  res.render('urls_show', templateVars); //we see the specific url
 });
 
 app.get('/urls/:shortURL', (req, res) => {
@@ -87,28 +104,49 @@ app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the t
 });
 
 app.post('/register', (req, res) => {//once we click register we get sent to urls
-  let userID = generateUserRandomId()
-  let email = req.body["email"];
-  let password = req.body["password"];
-  let user = {id:userID, email:email, password: password};
-  users[userID] = user;
-  res.cookie("user_id",userID)
-  res.redirect('/urls');
-  console.log(users);
-})
+  const userID = generateUserRandomId();
+  const emailExists = searchForUserEmail(req.body.email, users);
+  // const { email, password } = req.body; to inquire later
+  let email = req.body.email;
+  let password = req.body.password;
+  let user = { id: userID, email: email, password: password };
+  if (!email || !password) { //no email or no passcode? then status shows
+    return res.status(400).send('Sorry. You need to put something in the registration form.');
+  }
+  if (emailExists) { // using the function stored as a variable we can say does email exist?
+    return res.status(400).send('Sorry. Our records indicate you already have an account with us.');
+  }
+  users[userID] = user; //register goes on as normal
+  res.cookie("user_id", userID); //cookie is tagged
+  res.redirect('/urls'); // go back to urls
+});
 
 app.get('/u/:shortURL', (req, res) => {//makes my short URL work when we Click on it it goes to the long url
   const longURL = urlDatabase[req.params.shortURL];//change your code dummy what is that wack route
   res.redirect(longURL);
 });
-
-app.get('/register', (req, res) =>{//lets see the register page  
+//lets see the register page
+app.get('/register', (req, res) => {
   res.render('urls_register');
 });
 
-app.post('/login', (req,res) => {//we login and the cookie follows the username
-  res.cookie('username', req.body.username);
-  res.redirect('/urls');
+app.get('/login', (req, res) => {//this lets client see the login page
+  res.render('urls_login');
+});
+
+app.post('/login', (req, res) => {//
+  const email = req.body.email;
+  const password = req.body.password;
+  const userId = searchForUserEmail(email,users)
+  let passwordEmailMatch = checkLogin(email, password, users);
+  // let userId = the users verified email come back to this later
+  if (passwordEmailMatch) {//email and passcode are a match with database set cookie to user_id with random ID
+    res.cookie('user_id', userId["id"] );
+    res.redirect('/urls');
+  } else {
+  // if email is legit and password does not match in database respond with error
+    return res.status(403).send('Sorry. That e-mail/password is not right.');
+  }
 });
 
 app.post('/urls/:shortURL/edit', (req, res) => {
@@ -118,16 +156,10 @@ app.post('/urls/:shortURL/edit', (req, res) => {
   res.redirect(`/urls/${shortURL}`);//we redirect to urls
 });
 
-app.post('/logout',(req,res) => {//allows for user to logout
-  res.clearCookie('username')//cookie is clear from the database?
-  res.redirect('/urls')//redirect to home
+app.post('/logout', (req, res) => {//allows for user to logout
+  res.clearCookie('user_id');//cookie is clear from the database?
+  res.redirect('/urls');//redirect to home
 });
-
-
-
-
-
-
 
 
 app.listen(PORT, () => { // my server is now listening to the client
