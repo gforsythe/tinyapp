@@ -70,6 +70,11 @@ app.get('/urls/new', (req, res) => { // lets see the newURL
   const userId = req.cookies['user_id'];
   const user = users[userId];
   const templateVars = { user };
+  //if you are logged in view the page
+  //if not then you are redirected to login
+  if (!user) {
+    return res.redirect('/login');
+  }
   res.render('urls_new', templateVars);
 });
 
@@ -137,14 +142,14 @@ app.get('/login', (req, res) => {//this lets client see the login page
 app.post('/login', (req, res) => {//
   const email = req.body.email;
   const password = req.body.password;
-  const userId = searchForUserEmail(email,users)
+  const userId = searchForUserEmail(email, users)
   let passwordEmailMatch = checkLogin(email, password, users);
   // let userId = the users verified email come back to this later
   if (passwordEmailMatch) {//email and passcode are a match with database set cookie to user_id with random ID
-    res.cookie('user_id', userId["id"] );
+    res.cookie('user_id', userId["id"]);
     res.redirect('/urls');
   } else {
-  // if email is legit and password does not match in database respond with error
+    // if email is legit and password does not match in database respond with error
     return res.status(403).send('Sorry. That e-mail/password is not right.');
   }
 });
