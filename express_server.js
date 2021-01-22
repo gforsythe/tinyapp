@@ -6,8 +6,9 @@ const cookieParser = require('cookie-parser');
 
 //databases
 const urlDatabase = {
-  'b2xVn2': 'http://www.lighthouselabs.ca',
-  '9sm5xk': 'http://www.google.com'
+  b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
+  i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
+  // 1k32k3: {  longURL: "https://www.reddit.com", userID: "jadjk" }
 };
 //Database
 const users = {
@@ -77,14 +78,18 @@ app.get('/urls/new', (req, res) => { // lets see the newURL
   }
   res.render('urls_new', templateVars);
 });
-
-app.post('/urls', (req, res) => {//create a new tiny url to submit
-  let shortURL = generateUrlID();
-  urlDatabase[shortURL] = req["body"]["longURL"];
+//fix variable declarations
+app.post('/urls', (req, res) => {//create a new tiny url to submit 
+  const shortURL = generateUrlID();
+  const longURL = req["body"]["longURL"];
+  const userID = req.cookies['user_id'];
+  urlDatabase[shortURL] = { longURL, userID };
   res.redirect(`/urls/${shortURL}`);
+  // return res.status(200).send(`${JSON.stringify(urlDatabase)}`);
+
 });
 
-app.get('/urls', (req, res) => { //is it like home?
+app.get('/urls', (req, res) => { //is it like home
   const userId = req.cookies['user_id'];// here the addition of the username with cookies happens
   const user = users[userId];
   const templateVars = { urls: urlDatabase, user };//added username
@@ -94,12 +99,12 @@ app.get('/urls', (req, res) => { //is it like home?
 app.get('/urls/:shortURL', (req, res) => {
   const userId = req.cookies['user_id'];
   const user = users[userId];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user };
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user };
   res.render('urls_show', templateVars); //we see the specific url
 });
 
-app.get('/urls/:shortURL', (req, res) => {
-  res.json(urlDatabase); //not sure what this does
+app.get('/database', (req, res) => {
+  res.json(urlDatabase); //use for debugging(view the database)
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the table
@@ -127,7 +132,7 @@ app.post('/register', (req, res) => {//once we click register we get sent to url
 });
 
 app.get('/u/:shortURL', (req, res) => {//makes my short URL work when we Click on it it goes to the long url
-  const longURL = urlDatabase[req.params.shortURL];//change your code dummy what is that wack route
+  const longURL = urlDatabase[req.params.shortURL].longURL;//change your code dummy what is that wack route
   res.redirect(longURL);
 });
 //lets see the register page
@@ -157,7 +162,7 @@ app.post('/login', (req, res) => {//
 app.post('/urls/:shortURL/edit', (req, res) => {
   const shortURL = req.params.shortURL; //to submit an edit
   const longURL = req.body.newUrl;
-  urlDatabase[shortURL] = longURL;
+  urlDatabase[shortURL].longURL = longURL;
   res.redirect(`/urls/${shortURL}`);//we redirect to urls
 });
 
