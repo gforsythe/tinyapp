@@ -2,9 +2,9 @@ const bcrypt = require('bcrypt');
 const express = require('express');
 const app = express();
 const PORT = 8080;
-const morgan = require('morgan')
+const morgan = require('morgan');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 
 //Database
 const urlDatabase = {
@@ -25,8 +25,8 @@ const users = {
     password: "washer"
   }
 };
-
-function generateUserRandomId() { //give me a user ID
+//functions - express them at a later time
+const generateUserRandomId = function () { //give me a user ID
   let result = '';
   let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
@@ -35,7 +35,7 @@ function generateUserRandomId() { //give me a user ID
   }
   return result;
 }
-function generateUrlID() {//generates random id nnmber 6 digits
+const generateUrlID = function() {//generates random id nnmber 6 digits
   let result = '';
   let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
@@ -44,7 +44,7 @@ function generateUrlID() {//generates random id nnmber 6 digits
   }
   return result;
 }
-function searchForUserEmail(email, database) { //looks for email and finds a match
+const searchForUserEmail = function (email, database) { //looks for email and finds a match
   for (let key in database) {
     if (database[key].email === email) {
       return database[key];
@@ -53,7 +53,7 @@ function searchForUserEmail(email, database) { //looks for email and finds a mat
   return null;
 }
 
-function checkLogin(email, password, database) {//check login if time think about how I might not need it
+const checkLogin = function (email, password, database) {//check login if time think about how I might not need it
   for (let key in database) {
     if (database[key].email === email && bcrypt.compareSync(password, database[key].password)) {
       return database[key];
@@ -63,7 +63,7 @@ function checkLogin(email, password, database) {//check login if time think abou
 }
 
 
-function getURLSForUser(userid) {//take user id and find user and show that particular users urls
+const getURLSForUser = function (userid) {//take user id and find user and show that particular users urls
   let result = {};
   for (let key in urlDatabase) {
     if (urlDatabase[key].userID === userid) {
@@ -77,12 +77,16 @@ function getURLSForUser(userid) {//take user id and find user and show that part
 //my middleware - they handle my requests and make my life easier to code
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
 app.use(morgan('dev'));
+app.use(cookieSession({
+  name: 'username',
+  keys: ['key1', 'key2']
+}));
 
 
 app.get('/urls/new', (req, res) => { // lets see the newURL
-  const userId = req.cookies['user_id'];
+  const userId = req.session["user_id"];
+  
   const user = users[userId];
   const templateVars = { user };
   //if you are logged in view the page
@@ -96,7 +100,7 @@ app.get('/urls/new', (req, res) => { // lets see the newURL
 app.post('/urls', (req, res) => {//create a new tiny url to submit
   const shortURL = generateUrlID();
   const longURL = req["body"]["longURL"];
-  const userID = req.cookies['user_id'];
+  const userID = req.session["user_id"];
   urlDatabase[shortURL] = { longURL, userID };
   res.redirect(`/urls/${shortURL}`);
 
@@ -104,7 +108,7 @@ app.post('/urls', (req, res) => {//create a new tiny url to submit
 });
 
 app.get('/urls', (req, res) => { //is it like home
-  const userId = req.cookies['user_id'];// here the addition of the username with cookies happens
+  const userId = req.session["user_id"];// here the addition of the username with cookies happens
   const urlresult = getURLSForUser(userId);
   const templateVars = { urls: urlresult, user: users[userId] };//added username
   if (!userId) {
@@ -120,7 +124,7 @@ app.get('/urls', (req, res) => { //is it like home
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const userId = req.cookies['user_id'];
+  const userId = req.session["user_id"];
   const user = users[userId];
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user };
   res.render('urls_show', templateVars); //we see the specific url
@@ -132,7 +136,7 @@ app.get('/database', (req, res) => {
 
 app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the table
   const shortURL = req.params.shortURL; //store into a variable
-  const userId = req.cookies['user_id'];
+  const userId = req.session["user_id"];
   const user = users[userId];
   if (!user) {
     res.status(401).send('Sorry you are not logged in');
@@ -151,14 +155,15 @@ app.post('/register', (req, res) => {//once we click register we get sent to url
   let password = req.body.password;
   let user = { id: userID, email: email, password: bcrypt.hashSync(password, 10) };
   
-if (!email || !password) { //no email or no passcode? then status shows
+  if (!email || !password) { //no email or no passcode? then status shows
     return res.status(400).send('Sorry. You need to put something in the registration form.');
   }
-if (emailExists) { // using the function stored as a variable we can say does email exist?
+  if (emailExists) { // using the function stored as a variable we can say does email exist?
     return res.status(400).send('Sorry. Our records indicate you already have an account with us.');
   }
   users[userID] = user; //register goes on as normal
-  res.cookie("user_id", userID); //cookie is tagged
+  // res.cookie("user_id", userID); //cookie is tagged
+  req.session["user_id"] = userID;
   res.redirect('/urls'); // go back to urls
   console.log(user);
 });
@@ -183,7 +188,7 @@ app.post('/login', (req, res) => {//
   let passwordEmailMatch = checkLogin(email, password, users);
   // let userId = the users verified email come back to this later
   if (passwordEmailMatch) {//email and passcode are a match with database set cookie to user_id with random ID
-    res.cookie('user_id', userId["id"]);
+    req.session['user_id'] = userId["id"];
     res.redirect('/urls');
   } else {
     // if email is legit and password does not match in database respond with error
@@ -194,7 +199,7 @@ app.post('/login', (req, res) => {//
 app.post('/urls/:shortURL/edit', (req, res) => {
   const shortURL = req.params.shortURL; //to submit an edit
   const longURL = req.body.newUrl;
-  const userId = req.cookies['user_id'];
+  const userId = req.session["user_id"];
   const user = users[userId];
   if (!user) {
     res.status(401).send('Sorry you are not logged in');
@@ -207,7 +212,7 @@ app.post('/urls/:shortURL/edit', (req, res) => {
 });
 
 app.post('/logout', (req, res) => {//allows for user to logout
-  res.clearCookie('user_id');//cookie is clear from the database?
+  req.session = null
   res.redirect('/urls');//redirect to home
 });
 
