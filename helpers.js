@@ -1,4 +1,14 @@
+const bcrypt = require('bcrypt');
 
+
+const checkLogin = function (email, password, database) {//check login if time think about how I might not need it
+  for (let key in database) {
+    if (database[key].email === email && bcrypt.compareSync(password, database[key].password)) {
+      return database[key];
+    }
+  }
+  return null;
+}
 
 const searchForUserEmail = function (email, database) { //looks for email and finds a match
   for (let key in database) {
@@ -32,15 +42,7 @@ const generateUrlID = function() {//generates random id nnmber 6 digits
 
 
 
-const checkLogin = function (email, password, database) {//check login if time think about how I might not need it
-  for (let key in database) {
-    if (database[key].email === email && bcrypt.compareSync(password, database[key].password)) {
-      return database[key];
-    }
-  }
-  return null;
-}
 
 
 
-module.exports = { searchForUserEmail, generateUrlID, generateUserRandomId, checkLogin }
+module.exports = { searchForUserEmail, generateUrlID, generateUserRandomId, checkLogin}

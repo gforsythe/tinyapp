@@ -5,7 +5,7 @@ const PORT = 8080;
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
-const {searchForUserEmail, generateUrlID, generateUserRandomId, checkLogin, } = require('./helpers');
+const { searchForUserEmail, generateUrlID, generateUserRandomId, checkLogin } = require('./helpers');
 
 //Database
 const urlDatabase = {
@@ -26,6 +26,7 @@ const users = {
   }
 };
 
+//function that iterates through the database
 const getURLSForUser = function(userid) {//take user id and find user and show that particular users urls
   let result = {};
   for (let key in urlDatabase) {
@@ -37,7 +38,7 @@ const getURLSForUser = function(userid) {//take user id and find user and show t
   return result;
 };
 
-//my middleware 
+//my middleware
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -72,7 +73,7 @@ app.get('/urls', (req, res) => { //index
   const urlresult = getURLSForUser(userId);
   const templateVars = { urls: urlresult, user: users[userId] };
   if (!userId) {
-    return res.status(401).send('Hey you are not logged in? Would you like to register?');
+    return res.redirect('/register');//turn into a redirect to login
   } else {
     return res.render('urls_index', templateVars);
   }
@@ -80,9 +81,15 @@ app.get('/urls', (req, res) => { //index
 
 app.get('/urls/:shortURL', (req, res) => {
   const userId = req.session["user_id"];
-  const user = users[userId];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user };
-  res.render('urls_show', templateVars); //we see the specific url
+  const user = users[userId];//apply a check to make sure you are logged in
+  const urlObject = urlDatabase[req.params.shortURL]
+  const urlObjectOwner = urlObject.userID
+  if(userId === urlObjectOwner){
+    const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user };
+    res.render('urls_show', templateVars); //we see the specific url
+  } else {
+    res.status(401).send('sorry you do not have access to this account please login.')
+  }
 });
 
 app.get('/database', (req, res) => {
@@ -90,7 +97,7 @@ app.get('/database', (req, res) => {
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the table
-  const shortURL = req.params.shortURL; 
+  const shortURL = req.params.shortURL;
   const userId = req.session["user_id"];
   const user = users[userId];
   if (!user) {
@@ -173,3 +180,4 @@ app.post('/logout', (req, res) => {//allows for user to logout
 app.listen(PORT, () => { // my server is now listening to the client
   console.log(`Example app listeniing on port ${PORT}!`);
 });
+
