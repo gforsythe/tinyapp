@@ -60,6 +60,18 @@ function checkLogin(email, password, database) {
   return null;
 }
 
+
+function getURLSForUser(userid) {
+  let result = {};
+  for (let key in urlDatabase) {
+    if (urlDatabase[key].userID === userid) {
+      let temp = { longURL: urlDatabase[key].longURL };
+      result[key] = temp;
+    }
+  }
+  return result;
+}
+
 //my middleware - they handle my requests and make my life easier to code
 //I should install morgan
 app.set('view engine', 'ejs');
@@ -78,22 +90,31 @@ app.get('/urls/new', (req, res) => { // lets see the newURL
   }
   res.render('urls_new', templateVars);
 });
-//fix variable declarations
-app.post('/urls', (req, res) => {//create a new tiny url to submit 
+
+app.post('/urls', (req, res) => {//create a new tiny url to submit
   const shortURL = generateUrlID();
   const longURL = req["body"]["longURL"];
   const userID = req.cookies['user_id'];
   urlDatabase[shortURL] = { longURL, userID };
   res.redirect(`/urls/${shortURL}`);
-  // return res.status(200).send(`${JSON.stringify(urlDatabase)}`);
+
 
 });
 
 app.get('/urls', (req, res) => { //is it like home
   const userId = req.cookies['user_id'];// here the addition of the username with cookies happens
-  const user = users[userId];
-  const templateVars = { urls: urlDatabase, user };//added username
-  res.render('urls_index', templateVars);
+  const urlresult = getURLSForUser(userId);
+  const templateVars = { urls: urlresult, user: users[userId] };//added username
+  if (!userId) {
+    return res.status(401).send('Hey you are not logged in? Would you like to register?');
+  } else {
+    return res.render('urls_index', templateVars);
+
+  }
+  //user not logged in then prompt message sating to login or register
+  //if it returns true then we are good to show urls
+
+
 });
 
 app.get('/urls/:shortURL', (req, res) => {
@@ -109,8 +130,15 @@ app.get('/database', (req, res) => {
 
 app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the table
   const shortURL = req.params.shortURL; //store into a variable
-  delete urlDatabase[shortURL];//
-  res.redirect(`/urls`);
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  if (!user) {
+    res.status(401).send('Sorry you are not logged in');
+    
+  } else {
+    delete urlDatabase[shortURL];//deletes the url from the database
+    res.redirect(`/urls`);
+  }
 });
 
 app.post('/register', (req, res) => {//once we click register we get sent to urls
@@ -147,7 +175,7 @@ app.get('/login', (req, res) => {//this lets client see the login page
 app.post('/login', (req, res) => {//
   const email = req.body.email;
   const password = req.body.password;
-  const userId = searchForUserEmail(email, users)
+  const userId = searchForUserEmail(email, users);
   let passwordEmailMatch = checkLogin(email, password, users);
   // let userId = the users verified email come back to this later
   if (passwordEmailMatch) {//email and passcode are a match with database set cookie to user_id with random ID
@@ -162,8 +190,16 @@ app.post('/login', (req, res) => {//
 app.post('/urls/:shortURL/edit', (req, res) => {
   const shortURL = req.params.shortURL; //to submit an edit
   const longURL = req.body.newUrl;
-  urlDatabase[shortURL].longURL = longURL;
-  res.redirect(`/urls/${shortURL}`);//we redirect to urls
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  if (!user) {
+    res.status(401).send('Sorry you are not logged in');
+    
+  } else {
+    urlDatabase[shortURL].longURL = longURL;
+    res.redirect(`/urls/${shortURL}`);//we redirect to urls
+
+  }
 });
 
 app.post('/logout', (req, res) => {//allows for user to logout
