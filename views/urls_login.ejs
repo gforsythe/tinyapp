@@ -2,11 +2,13 @@
 <html lang="en">
 <head> 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>LOG IN HERE</title>
 </head>
 <body>
+  <main style="margin: 1em;"></main>
   <label>LOGIN</label>
+  <div id="form-wrapper">
   <form method="POST" action="/login">
   <input type="email" name="email"
   placeholder="email">
@@ -15,8 +17,10 @@
   placeholder="password">
   <input type="submit" name="login">
   </form>
+</div>
   <div>
   <a href='/register' class="btn btn-outline-primary">click here to register</a>
 </div>
+  
 </body>
 </html>
