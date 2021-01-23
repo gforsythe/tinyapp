@@ -1,14 +1,16 @@
+const bcrypt = require('bcrypt');
 const express = require('express');
 const app = express();
 const PORT = 8080;
+const morgan = require('morgan')
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 
-//databases
+//Database
 const urlDatabase = {
   b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
   i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
-  // 1k32k3: {  longURL: "https://www.reddit.com", userID: "jadjk" }
+  // example for my own mind 1k32k3: {  longURL: "https://www.reddit.com", userID: "jadjk" }
 };
 //Database
 const users = {
@@ -51,9 +53,9 @@ function searchForUserEmail(email, database) { //looks for email and finds a mat
   return null;
 }
 
-function checkLogin(email, password, database) {
+function checkLogin(email, password, database) {//check login if time think about how I might not need it
   for (let key in database) {
-    if (database[key].email === email && database[key].password === password) {
+    if (database[key].email === email && bcrypt.compareSync(password, database[key].password)) {
       return database[key];
     }
   }
@@ -61,7 +63,7 @@ function checkLogin(email, password, database) {
 }
 
 
-function getURLSForUser(userid) {
+function getURLSForUser(userid) {//take user id and find user and show that particular users urls
   let result = {};
   for (let key in urlDatabase) {
     if (urlDatabase[key].userID === userid) {
@@ -73,10 +75,10 @@ function getURLSForUser(userid) {
 }
 
 //my middleware - they handle my requests and make my life easier to code
-//I should install morgan
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(morgan('dev'));
 
 
 app.get('/urls/new', (req, res) => { // lets see the newURL
@@ -147,16 +149,18 @@ app.post('/register', (req, res) => {//once we click register we get sent to url
   // const { email, password } = req.body; to inquire later
   let email = req.body.email;
   let password = req.body.password;
-  let user = { id: userID, email: email, password: password };
-  if (!email || !password) { //no email or no passcode? then status shows
+  let user = { id: userID, email: email, password: bcrypt.hashSync(password, 10) };
+  
+if (!email || !password) { //no email or no passcode? then status shows
     return res.status(400).send('Sorry. You need to put something in the registration form.');
   }
-  if (emailExists) { // using the function stored as a variable we can say does email exist?
+if (emailExists) { // using the function stored as a variable we can say does email exist?
     return res.status(400).send('Sorry. Our records indicate you already have an account with us.');
   }
   users[userID] = user; //register goes on as normal
   res.cookie("user_id", userID); //cookie is tagged
   res.redirect('/urls'); // go back to urls
+  console.log(user);
 });
 
 app.get('/u/:shortURL', (req, res) => {//makes my short URL work when we Click on it it goes to the long url
