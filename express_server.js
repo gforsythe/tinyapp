@@ -82,13 +82,13 @@ app.get('/urls', (req, res) => { //index
 app.get('/urls/:shortURL', (req, res) => {
   const userId = req.session["user_id"];
   const user = users[userId];//apply a check to make sure you are logged in
-  const urlObject = urlDatabase[req.params.shortURL]
-  const urlObjectOwner = urlObject.userID
-  if(userId === urlObjectOwner){
+  const urlObject = urlDatabase[req.params.shortURL];
+  const urlObjectOwner = urlObject.userID;
+  if (userId === urlObjectOwner) {
     const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user };
     res.render('urls_show', templateVars); //we see the specific url
   } else {
-    res.status(401).send('sorry you do not have access to this account please login.')
+    res.status(401).send('sorry you do not have access to this account please login.');
   }
 });
 
