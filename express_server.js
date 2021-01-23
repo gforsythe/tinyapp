@@ -5,12 +5,12 @@ const PORT = 8080;
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
+const {searchForUserEmail, generateUrlID, generateUserRandomId, checkLogin, } = require('./helpers');
 
 //Database
 const urlDatabase = {
   b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
   i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
-  // example for my own mind 1k32k3: {  longURL: "https://www.reddit.com", userID: "jadjk" }
 };
 //Database
 const users = {
@@ -25,45 +25,8 @@ const users = {
     password: "washer"
   }
 };
-//functions - express them at a later time
-const generateUserRandomId = function () { //give me a user ID
-  let result = '';
-  let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let charactersLength = characters.length;
-  for (let i = 0; i < 5; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-  return result;
-}
-const generateUrlID = function() {//generates random id nnmber 6 digits
-  let result = '';
-  let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let charactersLength = characters.length;
-  for (let i = 0; i < 6; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-  return result;
-}
-const searchForUserEmail = function (email, database) { //looks for email and finds a match
-  for (let key in database) {
-    if (database[key].email === email) {
-      return database[key];
-    }
-  }
-  return null;
-}
 
-const checkLogin = function (email, password, database) {//check login if time think about how I might not need it
-  for (let key in database) {
-    if (database[key].email === email && bcrypt.compareSync(password, database[key].password)) {
-      return database[key];
-    }
-  }
-  return null;
-}
-
-
-const getURLSForUser = function (userid) {//take user id and find user and show that particular users urls
+const getURLSForUser = function(userid) {//take user id and find user and show that particular users urls
   let result = {};
   for (let key in urlDatabase) {
     if (urlDatabase[key].userID === userid) {
@@ -72,9 +35,9 @@ const getURLSForUser = function (userid) {//take user id and find user and show 
     }
   }
   return result;
-}
+};
 
-//my middleware - they handle my requests and make my life easier to code
+//my middleware 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -86,11 +49,8 @@ app.use(cookieSession({
 
 app.get('/urls/new', (req, res) => { // lets see the newURL
   const userId = req.session["user_id"];
-  
   const user = users[userId];
   const templateVars = { user };
-  //if you are logged in view the page
-  //if not then you are redirected to login
   if (!user) {
     return res.redirect('/login');
   }
@@ -107,20 +67,15 @@ app.post('/urls', (req, res) => {//create a new tiny url to submit
 
 });
 
-app.get('/urls', (req, res) => { //is it like home
-  const userId = req.session["user_id"];// here the addition of the username with cookies happens
+app.get('/urls', (req, res) => { //index
+  const userId = req.session["user_id"];
   const urlresult = getURLSForUser(userId);
-  const templateVars = { urls: urlresult, user: users[userId] };//added username
+  const templateVars = { urls: urlresult, user: users[userId] };
   if (!userId) {
     return res.status(401).send('Hey you are not logged in? Would you like to register?');
   } else {
     return res.render('urls_index', templateVars);
-
   }
-  //user not logged in then prompt message sating to login or register
-  //if it returns true then we are good to show urls
-
-
 });
 
 app.get('/urls/:shortURL', (req, res) => {
@@ -135,7 +90,7 @@ app.get('/database', (req, res) => {
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the table
-  const shortURL = req.params.shortURL; //store into a variable
+  const shortURL = req.params.shortURL; 
   const userId = req.session["user_id"];
   const user = users[userId];
   if (!user) {
@@ -150,7 +105,6 @@ app.post('/urls/:shortURL/delete', (req, res) => {//to delete the url from the t
 app.post('/register', (req, res) => {//once we click register we get sent to urls
   const userID = generateUserRandomId();
   const emailExists = searchForUserEmail(req.body.email, users);
-  // const { email, password } = req.body; to inquire later
   let email = req.body.email;
   let password = req.body.password;
   let user = { id: userID, email: email, password: bcrypt.hashSync(password, 10) };
@@ -186,7 +140,6 @@ app.post('/login', (req, res) => {//
   const password = req.body.password;
   const userId = searchForUserEmail(email, users);
   let passwordEmailMatch = checkLogin(email, password, users);
-  // let userId = the users verified email come back to this later
   if (passwordEmailMatch) {//email and passcode are a match with database set cookie to user_id with random ID
     req.session['user_id'] = userId["id"];
     res.redirect('/urls');
@@ -212,7 +165,7 @@ app.post('/urls/:shortURL/edit', (req, res) => {
 });
 
 app.post('/logout', (req, res) => {//allows for user to logout
-  req.session = null
+  req.session = null;
   res.redirect('/urls');//redirect to home
 });
 
